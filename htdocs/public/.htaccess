@@ -1,0 +1,3 @@
+# Viewer sees this .php file first
+DirectoryIndex login.php
+
