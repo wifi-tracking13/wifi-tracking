@@ -10,6 +10,7 @@ connection = mysql.connector.connect(host='192.168.137.1',
                                      user='brandon',
                                      password='password')
 try:
+    pi_id = input("Enter pi id number: ")
     while True:
         #remove first 3 rows of cvs file, unneccesary 
         df=pd.read_csv("../data/capture-01.csv", skiprows=3)
@@ -34,7 +35,7 @@ try:
                     foundMacAddress = True
                 cursorRow = cursor.fetchone()
             if (foundMacAddress):
-                cursor.execute("""INSERT INTO rssi (pi_id, mac_address, last_seen, power) VALUES (%s, %s, %s, %s)""", ("1", bcrypt.hashpw(currentMac.encode('utf8'), bcrypt.gensalt()), row['Last time seen'], row['Power']))
+                cursor.execute("""INSERT INTO rssi (pi_id, mac_address, last_seen, power) VALUES (%s, %s, %s, %s)""", (pi_id, bcrypt.hashpw(currentMac.encode('utf8'), bcrypt.gensalt()), row['Last time seen'], row['Power']))
                 connection.commit()
             else:
                 connection.commit()
