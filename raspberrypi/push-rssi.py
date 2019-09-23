@@ -37,16 +37,19 @@ try:
                 currentMac = row['Station MAC']
                 print('Searching for MAC address {} in database...'.format(currentMac))
                 cursor = connection.cursor()
-                cursor.execute("""SELECT mac_address FROM registered_macs WHERE enabled = 1""")
+                cursor.execute("""SELECT mac_address, id FROM registered_macs WHERE enabled = 1""")
                 cursorRow = cursor.fetchone()
+                currentUniqueId = -1
                 while cursorRow:
                     currentStoredMac = cursorRow[0]
+                    
                     if bcrypt.checkpw(currentMac.encode('utf8'), currentStoredMac.encode('utf8')):
                         print('Found! Storing RSSI value now...'.format(currentMac))
+                        currentUniqueId = cursorRow[1]
                         foundMacAddress = True
                     cursorRow = cursor.fetchone()
                 if (foundMacAddress):
-                    cursor.execute("""INSERT INTO rssi (pi_id, mac_address, last_seen, power) VALUES (%s, %s, %s, %s)""", (pi_id, bcrypt.hashpw(currentMac.encode('utf8'), bcrypt.gensalt()), row['Last time seen'], row['Power']))
+                    cursor.execute("""INSERT INTO rssi (pi_id, device_id, last_seen, power) VALUES (%s, %s, %s, %s)""", (pi_id, currentUniqueId, row['Last time seen'], row['Power']))
                     connection.commit()
                 else:
                     connection.commit()
