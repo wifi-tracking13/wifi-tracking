@@ -42,6 +42,7 @@ try:
                 print('Searching for MAC address {} in database...'.format(currentMac))
                 cursor = connection.cursor(buffered=True)
                 cursor.execute("""SELECT mac_address, id FROM registered_macs WHERE enabled = 1""")
+                connection.commit()
                 cursorRow = cursor.fetchone()
                 currentUniqueId = -1
                 while cursorRow:
@@ -53,24 +54,8 @@ try:
                         foundMacAddress = True
                     cursorRow = cursor.fetchone()
                 if (foundMacAddress):
-                    cursor.execute("""SELECT device_id, last_seen FROM rssi WHERE device_id=%s AND last_seen=%s""", (currentUniqueId, row['Last time seen'],))
-                    if cursor.fetchone() == None:
-                        # if specified timestamp and id is not currectly in DB create a row, else update row
-                        if(pi_id=='1'):
-                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_1_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], row['Power']))
-                        elif(pi_id=='2'):
-                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_2_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], row['Power']))
-                        elif(pi_id=='3'):
-                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_3_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], row['Power']))
-                    else:
-                        if(pi_id=='1'):
-                            cursor.execute("""UPDATE rssi SET pi_1_power = %s WHERE device_id=%s AND last_seen=%s""", (row['Power'], currentUniqueId, row['Last time seen']))
-                        elif(pi_id=='2'):
-                            cursor.execute("""UPDATE rssi SET pi_2_power = %s WHERE device_id=%s AND last_seen=%s""", (row['Power'], currentUniqueId, row['Last time seen']))
-                        elif(pi_id=='3'):
-                            cursor.execute("""UPDATE rssi SET pi_3_power = %s WHERE device_id=%s AND last_seen=%s""", (row['Power'], currentUniqueId, row['Last time seen']))
-                    connection.commit()
-                else:
+                    # if specified timestamp and id is not currectly in DB create a row, else update row
+                    cursor.execute("""INSERT INTO rssi (device_id, last_seen, power, pi_id) VALUES (%s, %s, %s, %s)""", (currentUniqueId, row['Last time seen'], row['Power'], pi_id))
                     connection.commit()
 finally:
     if(connection.is_connected()):
