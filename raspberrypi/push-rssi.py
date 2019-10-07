@@ -54,9 +54,15 @@ try:
                         foundMacAddress = True
                     cursorRow = cursor.fetchone()
                 if (foundMacAddress):
-                    # if specified timestamp and id is not currectly in DB create a row, else update row
-                    cursor.execute("""INSERT INTO rssi (device_id, last_seen, power, pi_id) VALUES (%s, %s, %s, %s)""", (currentUniqueId, row['Last time seen'], row['Power'], pi_id))
-                    connection.commit()
+                    if(pi_id=='1'):
+                        cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_1_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], row['Power']))
+                        connection.commit()
+                    if(pi_id=='2'):
+                        cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_2_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], row['Power']))
+                        connection.commit()
+                    if(pi_id=='3'):
+                        cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_3_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], row['Power']))
+                        connection.commit()
 finally:
     if(connection.is_connected()):
         cursor.close()
