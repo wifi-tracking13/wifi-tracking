@@ -9,6 +9,23 @@ connection = mysql.connector.connect(host='192.168.137.1',
                                      database='wifi_tracking',
                                      user='brandon',
                                      password='password')
+
+#Dictionary to store MovingAverage objects
+dictOfObjs = {}
+
+#Object class to store moving average values
+class MovingAverage:
+    def __init__(self):
+        self.window_size = 5
+        self.values = []
+        self.sum = 0
+    
+    def process(self, value):
+        self.values.append(value)
+        self.sum += value
+        if len(self.values) > self.window_size:
+            self.sum -= self.values.pop(0)
+        return float(self.sum) / len(self.values)
 try:
     while True:
         pi_id = input ("Enter pi identification number (1, 2, or 3): ")
@@ -42,7 +59,6 @@ try:
                 print('Searching for MAC address {} in database...'.format(currentMac))
                 cursor = connection.cursor(buffered=True)
                 cursor.execute("""SELECT mac_address, id FROM registered_macs WHERE enabled = 1""")
-                connection.commit()
                 cursorRow = cursor.fetchone()
                 currentUniqueId = -1
                 while cursorRow:
@@ -50,19 +66,56 @@ try:
                     
                     if bcrypt.checkpw(currentMac.encode('utf8'), currentStoredMac.encode('utf8')):
                         print('Found! Storing RSSI value now...'.format(currentMac))
+                        # Grabbing the device ID if found in the stored devices DB
                         currentUniqueId = cursorRow[1]
                         foundMacAddress = True
                     cursorRow = cursor.fetchone()
                 if (foundMacAddress):
                     if(pi_id=='1'):
-                        cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_1_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], row['Power']))
-                        connection.commit()
-                    if(pi_id=='2'):
-                        cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_2_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], row['Power']))
-                        connection.commit()
-                    if(pi_id=='3'):
-                        cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_3_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], row['Power']))
-                        connection.commit()
+                        if(dictOfObjs.get(currentUniqueId) == None):
+                            #Create object and store power value in dictionary
+                            #also push current average into DB
+                            currentObject = MovingAverage()
+                            currentAvg = currentObject.process(row['Power'])
+                            dictOfObjs[currentUniqueId] = currentObject
+                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_1_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
+                            connection.commit()
+                        else:
+                            #Retrieve object from dict, store power value and push
+                            #current average into DB
+                            currentAvg = dictOfObjs.get(currentUniqueId).process(row['Power'])
+                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_1_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
+                            connection.commit()
+                    elif(pi_id=='2'):
+                        if(dictOfObjs.get(currentUniqueId) == None):
+                            #Create object and store power value in dictionary
+                            #also push current average into DB
+                            currentObject = MovingAverage()
+                            currentAvg = currentObject.process(row['Power'])
+                            dictOfObjs[currentUniqueId] = currentObject
+                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_2_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
+                            connection.commit()
+                        else:
+                            #Retrieve object from dict, store power value and push
+                            #current average into DB
+                            currentAvg = dictOfObjs.get(currentUniqueId).process(row['Power'])
+                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_2_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
+                            connection.commit()
+                    else:
+                        if(dictOfObjs.get(currentUniqueId) == None):
+                            #Create object and store power value in dictionary
+                            #also push current average into DB
+                            currentObject = MovingAverage()
+                            currentAvg = currentObject.process(row['Power'])
+                            dictOfObjs[currentUniqueId] = currentObject
+                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_3_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
+                            connection.commit()
+                        else:
+                            #Retrieve object from dict, store power value and push
+                            #current average into DB
+                            currentAvg = dictOfObjs.get(currentUniqueId).process(row['Power'])
+                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_3_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
+                            connection.commit()
 finally:
     if(connection.is_connected()):
         cursor.close()
