@@ -5,7 +5,7 @@ import mysql.connector
 from mysql.connector import Error
 from mysql.connector import errorcode
 from dateutil.parser import parse
-connection = mysql.connector.connect(host='192.168.137.1',
+connection = mysql.connector.connect(host='10.229.30.185',
                                      database='wifi_tracking',
                                      user='brandon',
                                      password='password')
@@ -33,6 +33,8 @@ try:
         if pi_id in ['1', '2', '3']:
         # if it was equal - break from the while loop
             break
+    currentDate = parse('2000-01-01 00:00:00')
+    rowDate = 0
     while True:
         #remove first 3 rows of cvs file, unneccesary 
         df=pd.read_csv("../data/capture-01.csv", skiprows=3)
@@ -44,8 +46,6 @@ try:
         keep_col = ['Station MAC', 'Last time seen', 'Power']
         new_df = df[keep_col]
         
-        currentDate = parse('2000-01-01 00:00:00')
-        rowDate = 0
         #for loop to grab the most recent timestamp values
         for index, row in new_df.iterrows():
             rowDate = parse(row['Last time seen'])
@@ -56,7 +56,7 @@ try:
             if (currentDate == parse(row['Last time seen'])):       
                 foundMacAddress = False
                 currentMac = row['Station MAC']
-                print('Searching for MAC address {} in database...'.format(currentMac))
+                #print('Searching for MAC address {} in database...'.format(currentMac))
                 cursor = connection.cursor(buffered=True)
                 cursor.execute("""SELECT mac_address, id FROM registered_macs WHERE enabled = 1""")
                 cursorRow = cursor.fetchone()
@@ -65,7 +65,7 @@ try:
                     currentStoredMac = cursorRow[0]
                     
                     if bcrypt.checkpw(currentMac.encode('utf8'), currentStoredMac.encode('utf8')):
-                        print('Found! Storing RSSI value now...'.format(currentMac))
+                        #print('Found! Storing RSSI value now...'.format(currentMac))
                         # Grabbing the device ID if found in the stored devices DB
                         currentUniqueId = cursorRow[1]
                         foundMacAddress = True
@@ -78,14 +78,20 @@ try:
                             currentObject = MovingAverage()
                             currentAvg = currentObject.process(row['Power'])
                             dictOfObjs[currentUniqueId] = currentObject
-                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_1_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
-                            connection.commit()
+                            cursor.execute("""SELECT * FROM rssi where device_id = %s AND last_seen = %s""", (currentUniqueId, row['Last time seen']))
+                            data = cursor.fetchone()
+                            if data is None:
+                                print('Inserting device: ' + str(currentUniqueId) + ' at timestamp: ' + str(row['Last time seen']) + ' with db value: '+ str(currentAvg))
+                                cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_1_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
                         else:
                             #Retrieve object from dict, store power value and push
                             #current average into DB
                             currentAvg = dictOfObjs.get(currentUniqueId).process(row['Power'])
-                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_1_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
-                            connection.commit()
+                            cursor.execute("""SELECT * FROM rssi where device_id = %s AND last_seen = %s""", (currentUniqueId, row['Last time seen']))
+                            data = cursor.fetchone()
+                            if data is None:
+                                print('Inserting device: ' + str(currentUniqueId) + ' at timestamp: ' + str(row['Last time seen']) + ' with db value: '+ str(currentAvg))
+                                cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_1_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
                     elif(pi_id=='2'):
                         if(dictOfObjs.get(currentUniqueId) == None):
                             #Create object and store power value in dictionary
@@ -93,14 +99,20 @@ try:
                             currentObject = MovingAverage()
                             currentAvg = currentObject.process(row['Power'])
                             dictOfObjs[currentUniqueId] = currentObject
-                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_2_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
-                            connection.commit()
+                            cursor.execute("""SELECT * FROM rssi where device_id = %s AND last_seen = %s""", (currentUniqueId, row['Last time seen']))
+                            data = cursor.fetchone()
+                            if data is None:
+                                print('Inserting device: ' + str(currentUniqueId) + ' at timestamp: ' + str(row['Last time seen']) + ' with db value: '+ str(currentAvg))
+                                cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_2_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
                         else:
                             #Retrieve object from dict, store power value and push
                             #current average into DB
                             currentAvg = dictOfObjs.get(currentUniqueId).process(row['Power'])
-                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_2_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
-                            connection.commit()
+                            cursor.execute("""SELECT * FROM rssi where device_id = %s AND last_seen = %s""", (currentUniqueId, row['Last time seen']))
+                            data = cursor.fetchone()
+                            if data is None:
+                                print('Inserting device: ' + str(currentUniqueId) + ' at timestamp: ' + str(row['Last time seen']) + ' with db value: '+ str(currentAvg))
+                                cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_2_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
                     else:
                         if(dictOfObjs.get(currentUniqueId) == None):
                             #Create object and store power value in dictionary
@@ -108,14 +120,21 @@ try:
                             currentObject = MovingAverage()
                             currentAvg = currentObject.process(row['Power'])
                             dictOfObjs[currentUniqueId] = currentObject
-                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_3_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
-                            connection.commit()
+                            cursor.execute("""SELECT * FROM rssi where device_id = %s AND last_seen = %s""", (currentUniqueId, row['Last time seen']))
+                            data = cursor.fetchone()
+                            if data is None:
+                                print('Inserting device: ' + str(currentUniqueId) + ' at timestamp: ' + str(row['Last time seen']) + ' with db value: '+ str(currentAvg))
+                                cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_3_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
                         else:
                             #Retrieve object from dict, store power value and push
                             #current average into DB
                             currentAvg = dictOfObjs.get(currentUniqueId).process(row['Power'])
-                            cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_3_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
-                            connection.commit()
+                            cursor.execute("""SELECT * FROM rssi where device_id = %s AND last_seen = %s""", (currentUniqueId, row['Last time seen']))
+                            data = cursor.fetchone()
+                            if data is None:
+                                print('Inserting device: ' + str(currentUniqueId) + ' at timestamp: ' + str(row['Last time seen']) + ' with db value: '+ str(currentAvg))
+                                cursor.execute("""INSERT INTO rssi (device_id, last_seen, pi_3_power) VALUES (%s, %s, %s)""", (currentUniqueId, row['Last time seen'], currentAvg))
+                    connection.commit()
 finally:
     if(connection.is_connected()):
         cursor.close()
