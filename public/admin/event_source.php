@@ -26,15 +26,22 @@ $time = date('Y-m-d H:i:s');
 echo "event:server_time\n";
 echo "data:$time\n";
 echo "retry: 900\n\n";
+
 $query = "SELECT * FROM predicted_rssi WHERE displayed = 0 ORDER BY last_seen asc";
 if ($result = $mysqli->query($query)) {
 	while($row = $result->fetch_assoc()) {
-		$arr = array('device_id' => $row['device_id'], 'last_seen' => $row['last_seen'], 'x_coord' => $row['x_coord'], 'y_coord' => $row['y_coord']);
-		echo "event: log\n";
-		echo "data: ", json_encode($arr), "\n\n";
+		$device_id = $row['device_id'];
 		$current_id = $row['id'];
-		$innerQuery = "UPDATE predicted_rssi SET displayed = '1' WHERE id = '$current_id'";
-		$mysqli->query($innerQuery);
+		// MySQL statement to grab the associated email and device name from current ID
+		$emailQuery = "SELECT r.device_name, u.email FROM registered_macs r INNER JOIN predicted_rssi p ON r.id = p.device_id INNER JOIN users u ON u.userid = r.userid where p.device_id = '$device_id'";
+		if ($emailResult = $mysqli->query($emailQuery)) {
+			$innerRow = $emailResult->fetch_assoc();
+			$arr = array('device_id' => $row['device_id'], 'device_name' => $innerRow['device_name'], 'email' => $innerRow['email'], 'last_seen' => $row['last_seen'], 'x_coord' => $row['x_coord'], 'y_coord' => $row['y_coord']);
+			echo "event: log\n";
+			echo "data: ", json_encode($arr), "\n\n";
+		}
+		$updateQuery = "UPDATE predicted_rssi SET displayed = '1' WHERE id = '$current_id'";
+		$mysqli->query($updateQuery);
 	}
 } 
 
